@@ -45,14 +45,24 @@ tailscale_bin() {
 # and looks hung. Fail here instead, where we can say what to do about it.
 require_tailscale_up() {
   [[ "$HOME_PIVOT" =~ ^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\. ]] || return 0
-  local ts state
+  local ts state peer
   ts="$(tailscale_bin)"
   [[ -n "$ts" ]] || return 0   # can't tell; let ssh try
   state="$("$ts" status --json 2>/dev/null \
     | sed -n 's/.*"BackendState"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
-  [[ "$state" == "Running" ]] && return 0
-  echo "tailscale is ${state:-unreachable}, so ${HOME_PIVOT} has no route -- run 'tailscale up', then retry" >&2
-  exit 1
+  if [[ "$state" != "Running" ]]; then
+    echo "tailscale is ${state:-unreachable}, so ${HOME_PIVOT} has no route -- run 'tailscale up', then retry" >&2
+    exit 1
+  fi
+  # Local Tailscale being up says nothing about the pivot itself. It is a residential Mac
+  # whose Tailscale dies on an unattended reboot (router-setup ADR-0016): the peer then reads
+  # 'offline' here while our own BackendState stays Running, and ssh would sit in ConnectTimeout
+  # printing nothing. Name the real cause instead of letting it look like a generic timeout.
+  peer="$("$ts" status 2>/dev/null | grep -F "$HOME_PIVOT" || true)"
+  if [[ -n "$peer" ]] && grep -q "offline" <<<"$peer"; then
+    echo "pivot ${HOME_PIVOT} is offline in Tailscale -- nobody is logged into the home Mac (its Tailscale needs a login session to start after a reboot). Log in there, then retry." >&2
+    exit 1
+  fi
 }
 
 case "${1:-up}" in
