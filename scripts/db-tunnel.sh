@@ -6,6 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/db-tunnel.env"
+# shellcheck source=db-lib.sh
+source "${SCRIPT_DIR}/db-lib.sh"
 
 [[ -f "$ENV_FILE" ]] || { echo "missing $ENV_FILE (copy db-tunnel.env.example and fill it in)" >&2; exit 1; }
 # shellcheck disable=SC1090
@@ -31,14 +33,6 @@ is_up() { nc -z 127.0.0.1 "$LOCAL_PORT" >/dev/null 2>&1; }
 # Unique enough to identify our forward among any other ssh processes.
 forward_pattern="-L ${LOCAL_PORT}:${PROD_HOST}:${PROD_PORT}"
 
-tailscale_bin() {
-  if command -v tailscale >/dev/null 2>&1; then
-    command -v tailscale
-  elif [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
-    echo /Applications/Tailscale.app/Contents/MacOS/Tailscale
-  fi
-}
-
 # The pivot is reached over Tailscale. While Tailscale is stopped its 100.64/10 address has
 # no route, so the SYN falls through to the default gateway and is dropped in silence: ssh
 # then sits in TCP retransmit for the full 75s of net.inet.tcp.keepinit, printing nothing,
@@ -58,8 +52,8 @@ require_tailscale_up() {
   # whose Tailscale dies on an unattended reboot (router-setup ADR-0016): the peer then reads
   # 'offline' here while our own BackendState stays Running, and ssh would sit in ConnectTimeout
   # printing nothing. Name the real cause instead of letting it look like a generic timeout.
-  peer="$("$ts" status 2>/dev/null | grep -F "$HOME_PIVOT" || true)"
-  if [[ -n "$peer" ]] && grep -q "offline" <<<"$peer"; then
+  peer="$(ts_peer_line "$ts" "$HOME_PIVOT")"
+  if [[ -n "$peer" ]] && ts_line_offline "$peer"; then
     echo "pivot ${HOME_PIVOT} is offline in Tailscale -- nobody is logged into the home Mac (its Tailscale needs a login session to start after a reboot). Log in there, then retry." >&2
     exit 1
   fi

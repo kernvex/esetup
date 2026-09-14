@@ -5,6 +5,8 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/db-tunnel.env"
+# shellcheck source=db-lib.sh
+source "${SCRIPT_DIR}/db-lib.sh"
 
 ok()   { printf '  \033[0;32m✓\033[0m %s\n' "$1"; }
 pend() { printf '  \033[0;33m…\033[0m %s\n' "$1"; }
@@ -17,9 +19,7 @@ echo "db-tunnel readiness"
 
 # 1. Tooling
 command -v sqlcmd >/dev/null && ok "sqlcmd installed" || bad "sqlcmd missing (run the db-tunnel module)"
-if command -v tailscale >/dev/null; then TS=tailscale
-elif [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then TS=/Applications/Tailscale.app/Contents/MacOS/Tailscale
-else TS=""; fi
+TS="$(tailscale_bin)"
 [[ -n "$TS" ]] && ok "Tailscale present" || bad "Tailscale not installed"
 
 # 2. Config file
@@ -78,16 +78,15 @@ fi
 # in the same conditions. Prefer local state for a question local state can
 # answer.
 if [[ -n "$TS" ]]; then
-  node_line=$("$TS" status 2>/dev/null | grep -F "${EXIT_NODE:-__none__}" || true)
-  # 'offline' is checked before the exit-node tokens: an offline peer still advertises
-  # 'offers exit node' (with 'offline, last seen ...' appended), and reading that as ready is
-  # how a dead pivot passed every check for 2.5 days (router-setup ADR-0016: its Tailscale
-  # dies on an unattended reboot). 'exit node' matches both the offered and in-use forms.
-  if   [[ -z "$node_line" ]];               then pend "exit node ${EXIT_NODE:-<unset>} not in the tailnet right now"
-  elif grep -q "offline"   <<<"$node_line"; then bad  "exit node ${EXIT_NODE} is OFFLINE (its Tailscale is down — likely no login session after a reboot)"
-  elif grep -q "exit node" <<<"$node_line"; then ok   "exit node advertised & approved (${EXIT_NODE})"
-  else                                           pend "exit node not available yet (advertise on home + approve in admin console)"
-  fi
+  # ts_exit_node_state tests 'offline' before the exit-node tokens (see db-lib.sh): a dead
+  # pivot still advertises 'offers exit node', and reading that as ready is how it passed every
+  # check for 2.5 days (router-setup ADR-0016). 'available'/'in-use' both mean ready here.
+  case "$(ts_exit_node_state "$(ts_peer_line "$TS" "${EXIT_NODE:-__none__}")")" in
+    absent)           pend "exit node ${EXIT_NODE:-<unset>} not in the tailnet right now" ;;
+    offline)          bad  "exit node ${EXIT_NODE} is OFFLINE (its Tailscale is down — likely no login session after a reboot)" ;;
+    available|in-use) ok   "exit node advertised & approved (${EXIT_NODE})" ;;
+    *)                pend "exit node not available yet (advertise on home + approve in admin console)" ;;
+  esac
 fi
 
 # 7. Tunnel state
