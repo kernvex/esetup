@@ -5,6 +5,10 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/db-tunnel.env"
+# Guarded because this script runs without `set -e`: an unguarded source of a missing
+# db-lib.sh would carry on, leave TS empty, and report "Tailscale not installed" - a
+# confidently wrong diagnosis from the one script whose whole job is diagnosis.
+[[ -f "${SCRIPT_DIR}/db-lib.sh" ]] || { echo "missing ${SCRIPT_DIR}/db-lib.sh (incomplete checkout?)" >&2; exit 1; }
 # shellcheck source=db-lib.sh
 source "${SCRIPT_DIR}/db-lib.sh"
 

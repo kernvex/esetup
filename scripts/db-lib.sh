@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # db-lib.sh -- shared helpers for the db-tunnel tooling family (db-doctor, db-gui-mode,
 # db-tunnel). Sourced, never executed: it only defines functions and has no side effects
 # at source time, so `set -euo pipefail` callers can source it safely.
@@ -9,9 +10,9 @@
 # tested first. Encoding that once means Tailscale changing its wording is a one-file edit.
 
 # Echo the path to a usable tailscale CLI, or nothing if none is found. Prefer one on PATH;
-# fall back to the macOS app bundle's CLI. Always returns 0 so a `ts=$(tailscale_bin)`
-# assignment never trips `set -e`; callers test the result for emptiness and decide what an
-# empty result means (db-doctor reports it, db-gui-mode exits, db-tunnel lets ssh try).
+# fall back to the macOS app bundle's CLI. Finding nothing is not an error here: callers test
+# the result for emptiness and decide what it means (db-doctor reports it, db-gui-mode exits,
+# db-tunnel lets ssh try), so this returns 0 either way.
 tailscale_bin() {
   if command -v tailscale >/dev/null 2>&1; then
     command -v tailscale
@@ -42,7 +43,7 @@ ts_line_offline() {
 ts_exit_node_state() {
   local line="${1:-}"
   if   [[ -z "$line" ]];                       then echo "absent"
-  elif grep -q "offline" <<<"$line";           then echo "offline"
+  elif ts_line_offline "$line";                then echo "offline"
   elif grep -q "offers exit node" <<<"$line";  then echo "available"
   elif grep -q "exit node"        <<<"$line";  then echo "in-use"
   else                                              echo "peer-present"
