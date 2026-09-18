@@ -31,6 +31,40 @@ is_up() { nc -z 127.0.0.1 "$LOCAL_PORT" >/dev/null 2>&1; }
 # Unique enough to identify our forward among any other ssh processes.
 forward_pattern="-L ${LOCAL_PORT}:${PROD_HOST}:${PROD_PORT}"
 
+tailscale_bin() {
+  if command -v tailscale >/dev/null 2>&1; then
+    command -v tailscale
+  elif [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
+    echo /Applications/Tailscale.app/Contents/MacOS/Tailscale
+  fi
+}
+
+# The pivot is reached over Tailscale. While Tailscale is stopped its 100.64/10 address has
+# no route, so the SYN falls through to the default gateway and is dropped in silence: ssh
+# then sits in TCP retransmit for the full 75s of net.inet.tcp.keepinit, printing nothing,
+# and looks hung. Fail here instead, where we can say what to do about it.
+require_tailscale_up() {
+  [[ "$HOME_PIVOT" =~ ^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\. ]] || return 0
+  local ts state peer
+  ts="$(tailscale_bin)"
+  [[ -n "$ts" ]] || return 0   # can't tell; let ssh try
+  state="$("$ts" status --json 2>/dev/null \
+    | sed -n 's/.*"BackendState"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+  if [[ "$state" != "Running" ]]; then
+    echo "tailscale is ${state:-unreachable}, so ${HOME_PIVOT} has no route -- run 'tailscale up', then retry" >&2
+    exit 1
+  fi
+  # Local Tailscale being up says nothing about the pivot itself. It is a residential Mac
+  # whose Tailscale dies on an unattended reboot (router-setup ADR-0016): the peer then reads
+  # 'offline' here while our own BackendState stays Running, and ssh would sit in ConnectTimeout
+  # printing nothing. Name the real cause instead of letting it look like a generic timeout.
+  peer="$("$ts" status 2>/dev/null | grep -F "$HOME_PIVOT" || true)"
+  if [[ -n "$peer" ]] && grep -q "offline" <<<"$peer"; then
+    echo "pivot ${HOME_PIVOT} is offline in Tailscale -- nobody is logged into the home Mac (its Tailscale needs a login session to start after a reboot). Log in there, then retry." >&2
+    exit 1
+  fi
+}
+
 case "${1:-up}" in
   status)
     is_up && echo "tunnel up on 127.0.0.1:${LOCAL_PORT}" || echo "tunnel down"
@@ -43,8 +77,10 @@ case "${1:-up}" in
     : "${HOME_USER:?set HOME_USER in db-tunnel.env}"
     : "${PROD_HOST:?set PROD_HOST in db-tunnel.env}"
     if is_up; then echo "tunnel already up on 127.0.0.1:${LOCAL_PORT}"; exit 0; fi
+    require_tailscale_up
     ssh -f -N \
       ${ssh_key_opts[@]+"${ssh_key_opts[@]}"} \
+      -o ConnectTimeout=10 \
       -o ExitOnForwardFailure=yes \
       -o ServerAliveInterval=30 \
       -o ServerAliveCountMax=3 \

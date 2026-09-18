@@ -52,7 +52,24 @@ else
   pend "home Mac not reachable (Tailscale down on one end, or still relaying?)"
 fi
 
-# 5. Exit node (GUI mode)
+# 5. Tailscale tunnel MTU
+#
+# The failure this catches is the one that looks like success: SSH authenticates, `nc -z`
+# passes, and then the first full-size packet - a TLS ClientHello - vanishes, so the
+# connection dies of a broken pipe long after everything above went green. This site's
+# uplink carries ~1280 bytes (L2TP+GRE, router-setup ADR-0012) while Tailscale defaults its
+# tunnel to 1280 and adds 60 bytes of WireGuard+UDP+IP on top. The router's MSS clamping
+# cannot rescue it: WireGuard is UDP, so there is no TCP SYN to rewrite.
+if [[ -x "${SCRIPT_DIR}/tailscale-mtu.sh" ]]; then
+  mtu_msg=$("${SCRIPT_DIR}/tailscale-mtu.sh" check 2>/dev/null)
+  case $? in
+    0) ok   "$mtu_msg" ;;
+    2) pend "$mtu_msg" ;;
+    *) bad  "$mtu_msg — run: sudo scripts/install-tailscale-mtu.sh" ;;
+  esac
+fi
+
+# 6. Exit node (GUI mode)
 #
 # `exit-node list` queries the control plane and is flaky when Tailscale is
 # relaying through DERP - measured 1 pass in 3 while the datacentre was policing
@@ -61,12 +78,17 @@ fi
 # in the same conditions. Prefer local state for a question local state can
 # answer.
 if [[ -n "$TS" ]]; then
-  if "$TS" status 2>/dev/null | grep -F "${EXIT_NODE:-__none__}" | grep -q "offers exit node"; then
-    ok "exit node advertised & approved (${EXIT_NODE})"
-  else
-    pend "exit node not available yet (advertise on home + approve in admin console)"
+  node_line=$("$TS" status 2>/dev/null | grep -F "${EXIT_NODE:-__none__}" || true)
+  # 'offline' is checked before the exit-node tokens: an offline peer still advertises
+  # 'offers exit node' (with 'offline, last seen ...' appended), and reading that as ready is
+  # how a dead pivot passed every check for 2.5 days (router-setup ADR-0016: its Tailscale
+  # dies on an unattended reboot). 'exit node' matches both the offered and in-use forms.
+  if   [[ -z "$node_line" ]];               then pend "exit node ${EXIT_NODE:-<unset>} not in the tailnet right now"
+  elif grep -q "offline"   <<<"$node_line"; then bad  "exit node ${EXIT_NODE} is OFFLINE (its Tailscale is down — likely no login session after a reboot)"
+  elif grep -q "exit node" <<<"$node_line"; then ok   "exit node advertised & approved (${EXIT_NODE})"
+  else                                           pend "exit node not available yet (advertise on home + approve in admin console)"
   fi
 fi
 
-# 6. Tunnel state
+# 7. Tunnel state
 "${SCRIPT_DIR}/db-tunnel.sh" status 2>/dev/null | sed 's/^/  /'

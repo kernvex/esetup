@@ -15,3 +15,6 @@ scripts/db-tunnel.env
 # in the repo.
 scripts/*.env.*
 !scripts/*.env.example
+
+# local DataGrip config backups taken before agent edits
+.datagrip-backup-*/

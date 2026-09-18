@@ -39,10 +39,15 @@ show_ip() {
 exit_node_state() {
   local line
   line=$("$TS" status 2>/dev/null | grep -F "${EXIT_NODE:-__none__}" || true)
-  if   [[ -z "$line" ]];                     then echo "absent"
-  elif grep -q "offers exit node" <<<"$line"; then echo "available"
-  elif grep -q "exit node"        <<<"$line"; then echo "in-use"
-  else                                             echo "peer-present"
+  # 'offline' is tested before the exit-node tokens on purpose: a peer that is down still
+  # carries 'offers exit node' in its status line, with 'offline, last seen ...' appended.
+  # Reading that as 'available' is how a dead pivot looked healthy for 2.5 days (router-setup
+  # ADR-0016: its Tailscale dies on an unattended reboot).
+  if   [[ -z "$line" ]];                       then echo "absent"
+  elif grep -q "offline" <<<"$line";           then echo "offline"
+  elif grep -q "offers exit node" <<<"$line";  then echo "available"
+  elif grep -q "exit node"        <<<"$line";  then echo "in-use"
+  else                                              echo "peer-present"
   fi
 }
 
@@ -65,6 +70,13 @@ diagnose_no_tcp() {
 case "${1:-status}" in
   on)
     : "${EXIT_NODE:?set EXIT_NODE in db-tunnel.env (the home Mac Tailscale name)}"
+    # Refuse an offline (or absent) node. `tailscale set` accepts an offline node without
+    # complaint, then routes every packet into a peer that cannot answer and the whole laptop
+    # goes dark (ICMP/DNS may limp through DERP while all TCP hangs). Fail here with the reason.
+    case "$(exit_node_state)" in
+      offline) echo "refusing: exit node ${EXIT_NODE} is OFFLINE -- routing all traffic through it would black-hole this laptop" >&2; exit 1 ;;
+      absent)  echo "refusing: exit node ${EXIT_NODE} is not in the tailnet right now" >&2; exit 1 ;;
+    esac
     # allow-lan-access keeps local devices (printers, router) reachable while tunneled.
     "$TS" set --exit-node="$EXIT_NODE" --exit-node-allow-lan-access=true
     echo "exit node ON -> $EXIT_NODE"
@@ -80,6 +92,7 @@ case "${1:-status}" in
     case "$state" in
       in-use)      echo "exit node ACTIVE  -> ${EXIT_NODE}" ;;
       available)   echo "exit node off (${EXIT_NODE} is advertising, not in use)" ;;
+      offline)     echo "exit node ${EXIT_NODE} is OFFLINE (its Tailscale is down -- likely no login session after a reboot)" ;;
       peer-present) echo "peer ${EXIT_NODE} visible but not offering an exit node" ;;
       absent)      echo "peer ${EXIT_NODE} not in the tailnet right now" ;;
     esac
