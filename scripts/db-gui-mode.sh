@@ -14,17 +14,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/db-tunnel.env"
+# shellcheck source=db-lib.sh
+source "${SCRIPT_DIR}/db-lib.sh"
 # shellcheck disable=SC1090
 [[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
 
-# Prefer a tailscale on PATH; fall back to the macOS app bundle's CLI.
-if command -v tailscale >/dev/null 2>&1; then
-  TS=tailscale
-elif [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
-  TS=/Applications/Tailscale.app/Contents/MacOS/Tailscale
-else
-  echo "tailscale CLI not found (is the app installed?)" >&2; exit 1
-fi
+TS="$(tailscale_bin)"
+[[ -n "$TS" ]] || { echo "tailscale CLI not found (is the app installed?)" >&2; exit 1; }
 
 # Literal address on purpose: cdn-cgi/trace needs no DNS, so a resolver problem
 # cannot masquerade as "no connectivity". api.ipify.org needed both DNS and TCP
@@ -37,18 +33,7 @@ show_ip() {
 # 1 run in 3 while relaying through DERP; `status` reads the cached netmap and
 # was 6 of 6 in the same conditions.
 exit_node_state() {
-  local line
-  line=$("$TS" status 2>/dev/null | grep -F "${EXIT_NODE:-__none__}" || true)
-  # 'offline' is tested before the exit-node tokens on purpose: a peer that is down still
-  # carries 'offers exit node' in its status line, with 'offline, last seen ...' appended.
-  # Reading that as 'available' is how a dead pivot looked healthy for 2.5 days (router-setup
-  # ADR-0016: its Tailscale dies on an unattended reboot).
-  if   [[ -z "$line" ]];                       then echo "absent"
-  elif grep -q "offline" <<<"$line";           then echo "offline"
-  elif grep -q "offers exit node" <<<"$line";  then echo "available"
-  elif grep -q "exit node"        <<<"$line";  then echo "in-use"
-  else                                              echo "peer-present"
-  fi
+  ts_exit_node_state "$(ts_peer_line "$TS" "${EXIT_NODE:-__none__}")"
 }
 
 # The failure this exists to catch: with the exit node engaged, ICMP and DNS pass
