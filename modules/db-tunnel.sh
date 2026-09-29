@@ -55,7 +55,7 @@ db_tunnel_manual_notes() {
   record_manual "db-tunnel" "sign into Tailscale on this Mac AND on the home Mac (same tailnet)"
   record_manual "db-tunnel" "on the home Mac (the pivot): sudo systemsetup -f -setremotelogin on"
   record_manual "db-tunnel" "client must allowlist the home Mac's public IP; it is dynamic, so re-whitelisting is needed if it changes"
-  record_manual "db-tunnel" "create scripts/db-tunnel.env (gitignored) from scripts/db-tunnel.env.example with the prod host + read-only creds"
+  record_manual "db-tunnel" "create scripts/db-tunnel.env (gitignored) from scripts/db-tunnel.env.example with the prod host (the read-only login too, only if db-query.sh is to use it)"
   record_manual "db-tunnel" "for GUI mode: advertise the home Mac as a Tailscale exit node and approve it once in the admin console"
   record_manual "db-tunnel" "sudo scripts/install-tailscale-mtu.sh — Tailscale's default 1280 MTU does not fit this site's ~1280-byte uplink; without it SSH connects and then large packets vanish"
 }

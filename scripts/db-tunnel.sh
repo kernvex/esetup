@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Bring up (or check, or tear down) the SSH port-forward that routes a local port to the
 # client's prod MSSQL *through* the home Mac, so the DB sees the allowlisted home IP.
-# Reads scripts/db-tunnel.env.  Usage: db-tunnel.sh [up|status|down]
+# Reads scripts/db-tunnel.env.  Usage: db-tunnel.sh [up|status|down|target]
+#
+# `target` prints `<local host> <local port> <remote host> <remote port>` on one line, for a
+# caller that must confirm the forward reaches the server its credential names before it
+# sends that credential down it. It opens nothing, and it answers only while THIS forward is
+# running: a port that merely has a listener is not evidence of where it leads.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,8 +18,8 @@ source "${SCRIPT_DIR}/db-lib.sh"
 # shellcheck disable=SC1090
 set -a; source "$ENV_FILE"; set +a
 
-# Defaulted so `status`/`down` work on a partially-filled env; `up` enforces the
-# required ones below (it's the only path that actually opens the connection).
+# Defaulted so `status`/`down` work on a partially-filled env; `up` and `target` enforce
+# the ones they need below (`up` is the only path that actually opens the connection).
 HOME_PIVOT="${HOME_PIVOT:-}"
 HOME_USER="${HOME_USER:-}"
 PROD_HOST="${PROD_HOST:-}"
@@ -32,6 +37,14 @@ fi
 is_up() { nc -z 127.0.0.1 "$LOCAL_PORT" >/dev/null 2>&1; }
 # Unique enough to identify our forward among any other ssh processes.
 forward_pattern="-L ${LOCAL_PORT}:${PROD_HOST}:${PROD_PORT}"
+# Is the ssh process carrying THIS forward running? `is_up` only says something listens on
+# the port — a forward left by an earlier env to another host, or anything else bound there,
+# answers it the same. With ExitOnForwardFailure=yes our ssh cannot outlive a failed bind, so
+# the process running and the port listening together mean the listener is ours.
+#
+# The `--` is load-bearing: the pattern begins with `-L`, which BSD pgrep/pkill otherwise
+# parse as their own flag and reject as "illegal option" — silently, behind 2>/dev/null.
+has_our_forward() { pgrep -f -- "$forward_pattern" >/dev/null 2>&1; }
 
 # The pivot is reached over Tailscale. While Tailscale is stopped its 100.64/10 address has
 # no route, so the SYN falls through to the default gateway and is dropped in silence: ssh
@@ -63,14 +76,27 @@ case "${1:-up}" in
   status)
     is_up && echo "tunnel up on 127.0.0.1:${LOCAL_PORT}" || echo "tunnel down"
     ;;
+  target)
+    : "${PROD_HOST:?set PROD_HOST in db-tunnel.env}"
+    if is_up && has_our_forward; then
+      echo "127.0.0.1 ${LOCAL_PORT} ${PROD_HOST} ${PROD_PORT}"
+    else
+      echo "no live forward to ${PROD_HOST}:${PROD_PORT} on 127.0.0.1:${LOCAL_PORT} -- run 'up' first" >&2
+      exit 1
+    fi
+    ;;
   down)
-    pkill -f "$forward_pattern" 2>/dev/null && echo "tunnel torn down" || echo "no matching tunnel"
+    pkill -f -- "$forward_pattern" 2>/dev/null && echo "tunnel torn down" || echo "no matching tunnel"
     ;;
   up)
     : "${HOME_PIVOT:?set HOME_PIVOT in db-tunnel.env}"
     : "${HOME_USER:?set HOME_USER in db-tunnel.env}"
     : "${PROD_HOST:?set PROD_HOST in db-tunnel.env}"
-    if is_up; then echo "tunnel already up on 127.0.0.1:${LOCAL_PORT}"; exit 0; fi
+    if is_up; then
+      if has_our_forward; then echo "tunnel already up on 127.0.0.1:${LOCAL_PORT}"; exit 0; fi
+      echo "127.0.0.1:${LOCAL_PORT} is taken by something other than this forward to ${PROD_HOST}:${PROD_PORT} -- see 'lsof -nP -iTCP:${LOCAL_PORT} -sTCP:LISTEN', or change LOCAL_PORT" >&2
+      exit 1
+    fi
     require_tailscale_up
     ssh -f -N \
       ${ssh_key_opts[@]+"${ssh_key_opts[@]}"} \
@@ -89,5 +115,5 @@ case "${1:-up}" in
     fi
     ;;
   *)
-    echo "usage: $(basename "$0") [up|status|down]" >&2; exit 2 ;;
+    echo "usage: $(basename "$0") [up|status|down|target]" >&2; exit 2 ;;
 esac

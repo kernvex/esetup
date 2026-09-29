@@ -28,10 +28,21 @@ TS="$(tailscale_bin)"
 
 # 2. Config file
 [[ -f "$ENV_FILE" ]] && ok "db-tunnel.env exists" || bad "db-tunnel.env missing (copy db-tunnel.env.example)"
-for v in HOME_PIVOT HOME_USER HOME_SSH_KEY PROD_HOST DB_NAME DB_USER DB_PASSWORD; do
+for v in HOME_PIVOT HOME_USER HOME_SSH_KEY PROD_HOST; do
   # Never print the value — only whether it's set.
   if [[ -n "${!v:-}" ]]; then ok "$v set"; else pend "$v not set yet"; fi
 done
+# The login (DB_NAME, DB_USER, DB_PASSWORD) is optional: only db-query.sh reads it from this
+# file. A client that keeps the credential in a store of its own borrows the tunnel (`up`,
+# then `target`) and nothing else, so NO login is a correct state here, not a pending one.
+# HALF a login is not: db-query.sh would fail on it, so that one is still pending.
+if [[ -n "${DB_USER:-}" && -n "${DB_PASSWORD:-}" ]]; then
+  ok "DB_USER and DB_PASSWORD set (db-query.sh can log in)"
+elif [[ -n "${DB_USER:-}" || -n "${DB_PASSWORD:-}" ]]; then
+  pend "only one of DB_USER / DB_PASSWORD is set — db-query.sh needs both, or clear both if the login lives elsewhere"
+else
+  ok "no DB login in db-tunnel.env — db-query.sh is unavailable; the tunnel still serves a client holding its own credential"
+fi
 
 # 3. Local SSH key
 key="${HOME_SSH_KEY/#\~/$HOME}"
