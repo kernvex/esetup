@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Bring up (or check, or tear down) the SSH port-forward that routes a local port to the
 # client's prod MSSQL *through* the home Mac, so the DB sees the allowlisted home IP.
-# Reads scripts/db-tunnel.env.  Usage: db-tunnel.sh [up|status|down]
+# Reads scripts/db-tunnel.env.  Usage: db-tunnel.sh [up|status|down|target]
+#
+# `target` prints `<local host> <local port> <remote host> <remote port>` on one line, for a
+# caller that must confirm the forward reaches the server its credential names before it
+# sends that credential down it. It opens nothing.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -63,6 +67,10 @@ case "${1:-up}" in
   status)
     is_up && echo "tunnel up on 127.0.0.1:${LOCAL_PORT}" || echo "tunnel down"
     ;;
+  target)
+    : "${PROD_HOST:?set PROD_HOST in db-tunnel.env}"
+    echo "127.0.0.1 ${LOCAL_PORT} ${PROD_HOST} ${PROD_PORT}"
+    ;;
   down)
     pkill -f "$forward_pattern" 2>/dev/null && echo "tunnel torn down" || echo "no matching tunnel"
     ;;
@@ -89,5 +97,5 @@ case "${1:-up}" in
     fi
     ;;
   *)
-    echo "usage: $(basename "$0") [up|status|down]" >&2; exit 2 ;;
+    echo "usage: $(basename "$0") [up|status|down|target]" >&2; exit 2 ;;
 esac
