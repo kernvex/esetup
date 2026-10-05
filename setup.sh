@@ -828,10 +828,11 @@ detect_os() {
 }
 
 # --claude-skills fast path. Cross-platform (macOS / Linux / WSL): sets up ONLY the
-# Claude skills fork + ~/.claude/skills symlinks, for machines that already have
-# Claude installed. Deliberately does NOT touch Homebrew, dotfiles, or anything
-# macOS-specific — the skills installer is pure git + symlinks. We only sanity-check
-# that git is present and that `claude` is on PATH (a warning, not a hard requirement).
+# Claude skills, for machines that already have Claude installed: the fork's
+# ~/.claude/skills symlinks, the vendored third-party copies (git + awk + perl), and
+# the opt-in agent-reach CLI via uv. Deliberately does NOT touch Homebrew, dotfiles,
+# or anything macOS-specific. We only sanity-check that git is present and that
+# `claude` is on PATH (a warning, not a hard requirement).
 run_claude_skills_only() {
   detect_os
   log_info "Claude skills setup (--claude-skills) — detected host: ${OS_KIND}."
@@ -851,6 +852,7 @@ run_claude_skills_only() {
     fi
   fi
 
+  optional_agent_reach || record_failed "agent-reach" "uv tool install failed"
   setup_claude_skills
   log_info "Claude skills done. Linked into ${HOME}/.claude/skills."
 }
@@ -871,6 +873,7 @@ run_claude_only() {
     fi
   fi
   install_claude || record_failed "claude-code" "install_claude failed (native installer / cask)"
+  optional_agent_reach || record_failed "agent-reach" "uv tool install failed"
   setup_claude_skills || record_failed "claude-skills" "skills sync failed"
   log_info "Claude + skills done."
   print_action_summary
@@ -1122,7 +1125,11 @@ main() {
 
   optional_obsidian_lingo || record_failed "obsidian-lingo" "vault build/deploy failed"
 
-  # Non-Artifact, idempotent (git pull + symlinks): --upgrade runs it.
+  # Before the skills step: install-vendor-skills.sh generates the agent-reach skill only
+  # when its binary is on PATH, so the CLI has to land first.
+  optional_agent_reach || record_failed "agent-reach" "uv tool install failed"
+
+  # Non-Artifact, idempotent (git pull + symlinks + vendored copies): --upgrade runs it.
   if [[ "$NONINTERACTIVE" -eq 1 ]] || prompt_yes_no "Set up Claude Code skills (fork submodule + ~/.claude/skills symlinks)?" y; then
     setup_claude_skills || record_failed "claude-skills" "skills sync failed (git fetch/push)"
   fi

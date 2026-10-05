@@ -122,6 +122,7 @@ Standalone helpers under [`scripts/`](./scripts) (executable, run directly — n
 
 - [`migrate-to-fish.sh`](./scripts/migrate-to-fish.sh) — one-shot zsh → fish default-shell migration.
 - [`install-claude-skills.sh`](./scripts/install-claude-skills.sh) — link the Claude skills submodule into `~/.claude/skills` (see [docs/claude-skills](./docs/claude-skills)).
+- [`install-vendor-skills.sh`](./scripts/install-vendor-skills.sh) — generate the third-party skills listed in [`vendor-skills/MANIFEST`](./vendor-skills/MANIFEST) (Emil Kowalski's, taste-skill, agent-reach) into `~/.claude/skills` under per-repo prefixes (see [docs/claude-skills/vendor-skills.md](./docs/claude-skills/vendor-skills.md)). Called by `install-claude-skills.sh`; `--check` verifies.
 - [`update-github-remotes.sh`](./scripts/update-github-remotes.sh) — repoint git remotes after a GitHub handle rename (see below).
 - [`update-github-handle-refs.sh`](./scripts/update-github-handle-refs.sh) — rewrite GitHub handle references (URLs + repo slugs) inside file contents after a rename, preserving filesystem paths (see below).
 
