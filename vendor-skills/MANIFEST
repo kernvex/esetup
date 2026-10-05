@@ -1,0 +1,59 @@
+# Vendored third-party skills: which ones get generated into ~/.claude/skills, under what name.
+#
+# One skill per line:   <repo-dir>  <skill-dir within the repo>  <target name>  [flags...]
+#
+#   repo-dir     a submodule under vendor-skills/
+#   skill-dir    the folder holding the SKILL.md, relative to the repo
+#   target name  the directory AND frontmatter `name` the skill gets locally. Prefixed per
+#                repo so the `/` menu says where a skill came from: emil-, taste-. agent-reach
+#                already names its origin.
+#   flags        user-only            set `disable-model-invocation: true` on the copy
+#                requires-bin=<name>  generate only when <name> is on PATH
+#                source=<file>        read the frontmatter + body from this file instead of
+#                                     SKILL.md (agent-reach ships a Chinese SKILL.md and an
+#                                     English SKILL_en.md)
+#
+# A description can be replaced wholesale by a file at overrides/<target name>.description.
+# Nothing else about a skill's text is edited, except references to sibling skills from the
+# same repo, rewritten to the sibling's target name so handoffs stay exact: always when
+# backticked, and bare only for hyphenated names (`animate` and `prototype` are also words).
+#
+# Why these and not every folder: skills/CLAUDE.md in the fork keeps the promoted set small on
+# purpose, and the same applies here. Omitted from emil-skills: nothing. Omitted from taste-skill:
+# taste-skill-v1 (kept upstream for backward compatibility only), gpt-tasteskill (a GPT/Codex
+# variant), and the four image-generation prompts (brandkit, imagegen-frontend-web,
+# imagegen-frontend-mobile, image-to-code-skill) that need an image model Claude Code lacks.
+
+# emilkowalski/skills : animation and UI craft. Cross-reference each other by name.
+emil-skills   skills/emil-design-eng               emil-design-eng
+emil-skills   skills/animate                       emil-animate
+emil-skills   skills/animate-expo                  emil-animate-expo
+emil-skills   skills/animation-vocabulary          emil-animation-vocabulary
+emil-skills   skills/apple-design                  emil-apple-design
+emil-skills   skills/ask-sonner                    emil-ask-sonner
+emil-skills   skills/break-ui                      emil-break-ui
+emil-skills   skills/find-animation-opportunities  emil-find-animation-opportunities
+emil-skills   skills/improve-animations            emil-improve-animations
+emil-skills   skills/mobile-native                 emil-mobile-native
+emil-skills   skills/pick-ui-library               emil-pick-ui-library
+emil-skills   skills/prototype                     emil-prototype
+emil-skills   skills/review-animations             emil-review-animations
+emil-skills   skills/write-swift                   emil-write-swift
+
+# leonxlnx/taste-skill : frontend design direction. Folder names differ from the frontmatter
+# names upstream; the target name follows the frontmatter name, which is what the menu shows.
+# The three styles and the output enforcer are user-only here: all of them trigger on any
+# "build a page" request and would compete with each other and with design-taste-frontend.
+taste-skill   skills/taste-skill                   taste-design-taste-frontend
+taste-skill   skills/redesign-skill                taste-redesign-existing-projects
+taste-skill   skills/stitch-skill                  taste-stitch-design-taste
+taste-skill   skills/soft-skill                    taste-high-end-visual-design   user-only
+taste-skill   skills/minimalist-skill              taste-minimalist-ui            user-only
+taste-skill   skills/brutalist-skill               taste-industrial-brutalist-ui  user-only
+taste-skill   skills/output-skill                  taste-full-output-enforcement  user-only
+
+# Panniantong/agent-reach : platform fetchers behind the agent-reach CLI. The skill is useless
+# without the binary, so it is generated only once `uv tool install` has put one on PATH. Its
+# description is replaced (overrides/agent-reach.description) so it no longer claims every
+# "research this" request; Matt's research skill keeps those.
+agent-reach   agent_reach/skill                    agent-reach   source=SKILL_en.md  requires-bin=agent-reach

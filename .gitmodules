@@ -10,3 +10,12 @@
 [submodule "obsidian-lingo"]
 	path = obsidian-lingo
 	url = git@github.com:kernvex/obsidian-lingo.git
+[submodule "vendor-skills/agent-reach"]
+	path = vendor-skills/agent-reach
+	url = https://github.com/Panniantong/agent-reach.git
+[submodule "vendor-skills/emil-skills"]
+	path = vendor-skills/emil-skills
+	url = https://github.com/emilkowalski/skills.git
+[submodule "vendor-skills/taste-skill"]
+	path = vendor-skills/taste-skill
+	url = https://github.com/leonxlnx/taste-skill.git

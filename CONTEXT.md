@@ -178,3 +178,20 @@ this project computes one.** Homebrew computes it inside `brew outdated`; rustup
 inside `rustup check`. We read verdicts, never compare version strings — so ordering, semver, and
 strings like `py314_26.5.3-1` never enter the design.
 _Avoid_: version comparison, semver check
+
+### Claude skills
+
+**Vendored Skill**:
+A third-party skill generated into `~/.claude/skills` from a `vendor-skills/` submodule, as a
+copy under a per-repo prefix (`emil-`, `taste-`) carrying a `.vendor-skill` marker. Distinct from
+a fork skill (symlinked out of the `skills` submodule) and a shadow (linked last, from
+job-skills). Not an Artifact: no version, nothing for the Plan to see. See
+`docs/claude-skills/vendor-skills.md`.
+_Avoid_: external skill, imported skill
+
+**Skill Manifest**:
+`vendor-skills/MANIFEST`, the register of Vendored Skills: one line per skill naming its
+submodule, folder, target name and flags. The word "manifest" is otherwise avoided for the
+Declared Set; this is the one thing in the repo that is a manifest, and it is not a Declared Set
+(its members are generated files, not Artifacts).
+_Avoid_: vendor list, skill list

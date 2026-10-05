@@ -1,6 +1,8 @@
 # Adding a personal skill
 
 Skills are added **only** in your own bucket so upstream merges never conflict (Rule A/B).
+This page is for skills you write. A skill from someone else's repo is vendored instead:
+see `vendor-skills.md`.
 
 ## Loop
 

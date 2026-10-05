@@ -128,6 +128,11 @@ fi
 link_skills                           # idempotent; picks up any newly-synced skills
 echo "✓ Done. Skills linked into ${CLAUDE_SKILLS_DIR}."
 
+# Third-party skills (vendor-skills/ submodules) are generated copies, prefixed per repo. They
+# go in after the fork links and before the job-skills shadows, so ordering stays
+# fork, then vendor, then private shadows win. See docs/claude-skills/vendor-skills.md.
+bash "${MANAGER_REPO}/scripts/install-vendor-skills.sh"
+
 # job-skills shadows some of the names just linked above, so it MUST run after link_skills.
 # Calling it from here rather than leaving it to setup.sh is deliberate: this script is the
 # documented way to re-link skills, and running it alone must not leave the shadows reverted.
