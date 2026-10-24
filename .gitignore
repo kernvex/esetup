@@ -3,7 +3,7 @@
 # it is private, and this repo is public, so a submodule would break --recursive
 # for everyone without access. See job-skills/docs/adr/0002.
 job-skills/
-obsidian-job-doc/
+job-doc/
 identity/
 
 # Client prod DB credentials for the db-tunnel module. Public repo — never commit.

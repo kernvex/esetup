@@ -21,9 +21,9 @@ MANAGER_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # a client. "identity" is deliberately generic: it says what the repo does and
 # nothing about whose identities it holds.
 PRIVATE_REPOS=(
-  "obsidian-job-doc|git@github.com:kernvex/obsidian-job-doc.git|the job-doc generator and binary"
+  "job-doc|git@github.com:kernvex/job-doc.git|the job-doc generator and binary"
   "job-skills|git@github.com:kernvex/job-skills.git|Job-aware skills that shadow the upstream ones"
-  "identity|git@github.com:kernvex/identity.git|per-folder identity routing, generated from data"
+  "identity|git@github.com:kernvex/job-id.git|per-folder identity routing, generated from data"
 )
 
 clone_or_update() {
