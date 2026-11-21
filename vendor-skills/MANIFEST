@@ -19,10 +19,10 @@
 # backticked, and bare only for hyphenated names (`animate` and `prototype` are also words).
 #
 # Why these and not every folder: skills/CLAUDE.md in the fork keeps the promoted set small on
-# purpose, and the same applies here. Omitted from emil-skills: nothing. Omitted from taste-skill:
-# taste-skill-v1 (kept upstream for backward compatibility only), gpt-tasteskill (a GPT/Codex
-# variant), and the four image-generation prompts (brandkit, imagegen-frontend-web,
-# imagegen-frontend-mobile, image-to-code-skill) that need an image model Claude Code lacks.
+# purpose, and the same applies here. Omitted from emil-skills: nothing. taste-skill ships one
+# skill since v2.5. Omitted from taste-skill-classics: taste-skill-v1 and
+# taste-skill-v2-experimental (earlier versions of the main skill, kept for backward
+# compatibility only) and gpt-tasteskill (a GPT/Codex variant).
 
 # emilkowalski/skills : animation and UI craft. Cross-reference each other by name.
 emil-skills   skills/emil-design-eng               emil-design-eng
@@ -48,15 +48,18 @@ emil-skills   skills/remove-animations             emil-remove-animations
 
 # leonxlnx/taste-skill : frontend design direction. Folder names differ from the frontmatter
 # names upstream; the target name follows the frontmatter name, which is what the menu shows.
-# The three styles and the output enforcer are user-only here: all of them trigger on any
-# "build a page" request and would compete with each other and with design-taste-frontend.
+# v2.5 folded redesign-existing-projects into design-taste-frontend (it audits an existing page
+# before changing it) and removed full-output-enforcement, so neither has a row any more.
 taste-skill   skills/taste-skill                   taste-design-taste-frontend
-taste-skill   skills/redesign-skill                taste-redesign-existing-projects
-taste-skill   skills/stitch-skill                  taste-stitch-design-taste
-taste-skill   skills/soft-skill                    taste-high-end-visual-design   user-only
-taste-skill   skills/minimalist-skill              taste-minimalist-ui            user-only
-taste-skill   skills/brutalist-skill               taste-industrial-brutalist-ui  user-only
-taste-skill   skills/output-skill                  taste-full-output-enforcement  user-only
+
+# leonxlnx/taste-skill-classics : the style skills taste-skill v2.5 moved out. They keep the
+# taste- prefix because they are the same family. The three styles stay user-only here: all of
+# them trigger on any "build a page" request and would compete with each other and with
+# design-taste-frontend. Upstream now marks all four opt-in itself, stitch included.
+taste-skill-classics   skills/stitch-skill         taste-stitch-design-taste
+taste-skill-classics   skills/soft-skill           taste-high-end-visual-design   user-only
+taste-skill-classics   skills/minimalist-skill     taste-minimalist-ui            user-only
+taste-skill-classics   skills/brutalist-skill      taste-industrial-brutalist-ui  user-only
 
 # Panniantong/agent-reach : platform fetchers behind the agent-reach CLI. The skill is useless
 # without the binary, so it is generated only once `uv tool install` has put one on PATH. Its

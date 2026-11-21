@@ -1,12 +1,13 @@
 # Vendored third-party skills
 
 Skills from other people's repos, installed beside the fork's, each under a prefix that says
-where it came from. Three today:
+where it came from. Four today:
 
 | Submodule | Upstream | Prefix | What it is |
 |---|---|---|---|
-| `vendor-skills/emil-skills` | [emilkowalski/skills](https://github.com/emilkowalski/skills) | `emil-` | animation and UI craft, 14 skills that hand off to each other |
-| `vendor-skills/taste-skill` | [leonxlnx/taste-skill](https://github.com/leonxlnx/taste-skill) | `taste-` | frontend design direction; 7 of its 13 are taken |
+| `vendor-skills/emil-skills` | [emilkowalski/skills](https://github.com/emilkowalski/skills) | `emil-` | animation and UI craft, 20 skills that hand off to each other |
+| `vendor-skills/taste-skill` | [leonxlnx/taste-skill](https://github.com/leonxlnx/taste-skill) | `taste-` | frontend design direction; since v2.5 one skill, `design-taste-frontend` |
+| `vendor-skills/taste-skill-classics` | [Leonxlnx/taste-skill-classics](https://github.com/Leonxlnx/taste-skill-classics) | `taste-` | the style skills taste-skill v2.5 moved out; 4 of its 7 are taken |
 | `vendor-skills/agent-reach` | [Panniantong/agent-reach](https://github.com/Panniantong/agent-reach) | none | one skill in front of a Python CLI that fetches X, Reddit, YouTube, ... |
 
 ## The two files that matter

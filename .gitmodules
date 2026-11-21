@@ -19,3 +19,6 @@
 [submodule "vendor-skills/taste-skill"]
 	path = vendor-skills/taste-skill
 	url = https://github.com/leonxlnx/taste-skill.git
+[submodule "vendor-skills/taste-skill-classics"]
+	path = vendor-skills/taste-skill-classics
+	url = https://github.com/Leonxlnx/taste-skill-classics.git
