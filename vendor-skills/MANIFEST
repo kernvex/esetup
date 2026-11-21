@@ -39,6 +39,12 @@ emil-skills   skills/pick-ui-library               emil-pick-ui-library
 emil-skills   skills/prototype                     emil-prototype
 emil-skills   skills/review-animations             emil-review-animations
 emil-skills   skills/write-swift                   emil-write-swift
+emil-skills   skills/animation-performance         emil-animation-performance
+emil-skills   skills/ask-emil                      emil-ask-emil
+emil-skills   skills/choreograph                   emil-choreograph
+emil-skills   skills/gestures                      emil-gestures
+emil-skills   skills/learn-taste                   emil-learn-taste
+emil-skills   skills/remove-animations             emil-remove-animations
 
 # leonxlnx/taste-skill : frontend design direction. Folder names differ from the frontmatter
 # names upstream; the target name follows the frontmatter name, which is what the menu shows.
